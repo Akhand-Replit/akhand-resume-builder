@@ -157,7 +157,7 @@ def generate_html(data, template_name):
     return env.render(data=data, **resume_data)
 
 def generate_latex(data, template_name):
-    template = """
+    template = r"""
     \documentclass{article}
     \usepackage[utf8]{inputenc}
     \usepackage{hyperref}
@@ -185,6 +185,8 @@ def generate_latex(data, template_name):
     """
     env = Environment(loader=BaseLoader).from_string(template)
     return env.render(data=data, **resume_data)
+
+
 
 # Generate output
 if st.button("Generate Resume"):
