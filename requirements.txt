@@ -1,0 +1,4 @@
+streamlit
+Jinja2
+reportlab
+PyPDF2
