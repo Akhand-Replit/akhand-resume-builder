@@ -87,35 +87,69 @@ resume_data = {
     'skills': [skill.strip() for skill in skills if skill.strip()]
 }
 
+
 def generate_pdf(data, template_name):
     buffer = io.BytesIO()
     
-    if template_name == "Basic":
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = []
-        
-        # Add content
-        story.append(Paragraph(data['name'], styles['Title']))
-        contact_info = f"{data['contact']['email']} | {data['contact']['phone']} | {data['contact']['linkedin']} | {data['contact']['github']}"
-        story.append(Paragraph(contact_info, styles['BodyText']))
-        
-        # Add sections
-        for section in ['Work Experience', 'Education', 'Skills']:
-            story.append(Paragraph(section, styles['Heading2']))
-            entries = data[section.lower().replace(' ', '_')]
-            for entry in entries:
-                text = f"<b>{entry.get('job_title', entry.get('degree', ''))}</b>"
-                text += f"<br/>{entry.get('company', entry.get('institution', ''))}"
-                text += f"<br/>{entry.get('dates', '')}"
-                if 'description' in entry:
-                    text += f"<br/>{entry['description']}"
-                story.append(Paragraph(text, styles['BodyText']))
-        
-        doc.build(story)
-    
-    buffer.seek(0)
-    return buffer
+    try:
+        if template_name == "Basic":
+            doc = SimpleDocTemplate(buffer, 
+                                  pagesize=letter,
+                                  rightMargin=72,
+                                  leftMargin=72,
+                                  topMargin=72,
+                                  bottomMargin=72)
+            styles = getSampleStyleSheet()
+            story = []
+            
+            # Add name
+            story.append(Paragraph(data['name'], styles['Title']))
+            
+            # Add contact information
+            contact_info = [
+                data['contact']['email'],
+                data['contact']['phone'],
+                data['contact']['linkedin'],
+                data['contact']['github']
+            ]
+            contact_text = " | ".join(filter(None, contact_info))
+            story.append(Paragraph(contact_text, styles['BodyText']))
+            story.append(Spacer(1, 12))
+
+            # Add sections with proper validation
+            sections = [
+                ('Work Experience', 'work_experience'),
+                ('Education', 'education'),
+                ('Skills', 'skills')
+            ]
+            
+            for section_title, section_key in sections:
+                if data.get(section_key):
+                    story.append(Paragraph(section_title, styles['Heading2']))
+                    for entry in data[section_key]:
+                        if section_key == 'skills':
+                            text = f"• {entry}"
+                        else:
+                            text = [
+                                f"<b>{entry.get('job_title', entry.get('degree', ''))}</b>",
+                                f"{entry.get('company', entry.get('institution', ''))}",
+                                f"{entry.get('dates', '')}",
+                                f"{entry.get('description', '')}"
+                            ]
+                            text = "<br/>".join(filter(None, text))
+                        
+                        story.append(Paragraph(text, styles['BodyText']))
+                        story.append(Spacer(1, 6))
+                    
+                    story.append(Spacer(1, 12))
+
+            doc.build(story)
+            buffer.seek(0)
+            return buffer.getvalue()
+            
+    except Exception as e:
+        st.error(f"Error generating PDF: {str(e)}")
+        return None
 
 def generate_html(data, template_name):
     template = """
@@ -188,16 +222,16 @@ def generate_latex(data, template_name):
 
 
 
-# Generate output
 if st.button("Generate Resume"):
     if export_format == "PDF":
-        pdf_file = generate_pdf(resume_data, template)
-        st.download_button(
-            label="Download PDF",
-            data=pdf_file,
-            file_name="resume.pdf",
-            mime="application/pdf"
-        )
+        pdf_bytes = generate_pdf(resume_data, template)
+        if pdf_bytes:
+            st.download_button(
+                label="Download PDF",
+                data=pdf_bytes,
+                file_name="resume.pdf",
+                mime="application/pdf"
+            )
     elif export_format == "HTML":
         html_content = generate_html(resume_data, template)
         st.download_button(
